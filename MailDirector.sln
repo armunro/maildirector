@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MailDirector", "MailDirector\MailDirector.csproj", "{8D4E48FE-27DF-4511-9849-1BD6EE7AC3AE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MailDirector.Tests", "MailDirector.Tests\MailDirector.Tests.csproj", "{EC81FF3E-FF6D-4276-A2E1-AA4C11994CE4}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8D4E48FE-27DF-4511-9849-1BD6EE7AC3AE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8D4E48FE-27DF-4511-9849-1BD6EE7AC3AE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8D4E48FE-27DF-4511-9849-1BD6EE7AC3AE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8D4E48FE-27DF-4511-9849-1BD6EE7AC3AE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EC81FF3E-FF6D-4276-A2E1-AA4C11994CE4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EC81FF3E-FF6D-4276-A2E1-AA4C11994CE4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EC81FF3E-FF6D-4276-A2E1-AA4C11994CE4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EC81FF3E-FF6D-4276-A2E1-AA4C11994CE4}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

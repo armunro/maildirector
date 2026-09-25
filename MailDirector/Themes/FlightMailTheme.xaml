@@ -1,0 +1,122 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                    xmlns:converters="clr-namespace:MailDirector.Converters">
+
+    <!-- Converters -->
+    <converters:BoolToVisibilityConverter x:Key="BoolToVis"/>
+    <converters:BoolToVisibilityConverter x:Key="InverseBoolToVis" Inverse="True"/>
+    <converters:NullToVisibilityConverter x:Key="NullToVis"/>
+    <converters:NullToVisibilityConverter x:Key="InverseNullToVis" Inverse="True"/>
+    <converters:NullToBoolConverter x:Key="NullToBool"/>
+    <converters:FriendlyDateConverter x:Key="FriendlyDate"/>
+    <converters:HexColorToBrushConverter x:Key="HexColorBrush"/>
+    <converters:StringTruncateConverter x:Key="Truncate"/>
+    <converters:InitialsConverter x:Key="Initials"/>
+    <converters:FolderLevelToMarginConverter x:Key="FolderLevelMargin"/>
+    <converters:FolderSymbolIconConverter x:Key="FolderSymbol"/>
+    <converters:ActionTypeToStringConverter x:Key="ActionTypeToString"/>
+
+    <!-- Refresh Spinner Template -->
+    <DataTemplate x:Key="RefreshSpinnerTemplate">
+        <Viewbox Width="14" Height="14" Stretch="Uniform">
+            <Grid Width="20" Height="20">
+                <Grid.RenderTransform>
+                    <RotateTransform x:Name="RefreshSpinnerRotate" CenterX="10" CenterY="10"/>
+                </Grid.RenderTransform>
+                <Grid.Triggers>
+                    <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                        <BeginStoryboard Name="RefreshSpinnerStoryboard">
+                            <Storyboard RepeatBehavior="Forever">
+                                <DoubleAnimation Storyboard.TargetName="RefreshSpinnerRotate"
+                                                 Storyboard.TargetProperty="Angle"
+                                                 From="0"
+                                                 To="360"
+                                                 Duration="0:0:0.9"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </EventTrigger>
+                    <EventTrigger RoutedEvent="FrameworkElement.Unloaded">
+                        <StopStoryboard BeginStoryboardName="RefreshSpinnerStoryboard"/>
+                    </EventTrigger>
+                </Grid.Triggers>
+                <Ellipse Width="16"
+                         Height="16"
+                         Stroke="{DynamicResource SystemAccentColorPrimaryBrush}"
+                         StrokeThickness="2.5"
+                         StrokeDashArray="3 8"/>
+            </Grid>
+        </Viewbox>
+    </DataTemplate>
+
+    <!-- Folder List Item Style -->
+    <Style x:Key="FolderListItemStyle" TargetType="ListBoxItem">
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Margin" Value="2,1"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBoxItem">
+                    <Border x:Name="Bd"
+                            Background="Transparent"
+                            BorderBrush="Transparent"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="8,6">
+                        <ContentPresenter HorizontalAlignment="Stretch"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}"/>
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}"/>
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                                <Condition Property="IsSelected" Value="False"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}"/>
+                        </MultiTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Email List Item Style -->
+    <Style x:Key="EmailListItemStyle" TargetType="ListBoxItem">
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Margin" Value="0,0,0,4"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBoxItem">
+                    <Border x:Name="EmailCard"
+                            Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="12,10">
+                        <ContentPresenter HorizontalAlignment="Stretch"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="EmailCard" Property="BorderBrush" Value="{DynamicResource SystemAccentColorPrimaryBrush}"/>
+                            <Setter TargetName="EmailCard" Property="Background" Value="{DynamicResource CardBackgroundFillColorSecondaryBrush}"/>
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                                <Condition Property="IsSelected" Value="False"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="EmailCard" Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}"/>
+                        </MultiTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>

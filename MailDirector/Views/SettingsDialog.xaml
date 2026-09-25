@@ -1,0 +1,141 @@
+﻿<ui:FluentWindow x:Class="MailDirector.Views.SettingsDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        xmlns:viewModels="clr-namespace:MailDirector.ViewModels"
+        Title="Settings"
+        Width="580" Height="580"
+        WindowStartupLocation="CenterOwner"
+        WindowBackdropType="Mica"
+        ExtendsContentIntoTitleBar="True"
+        Background="{DynamicResource ApplicationBackgroundBrush}">
+
+    <Grid Margin="24,12,24,20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="Settings"/>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,12,0,12">
+            <StackPanel>
+                <TextBlock Text="MailDirector Settings"
+                           FontSize="18" FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                           Margin="0,0,0,16"/>
+
+                <!-- Section: Microsoft Graph -->
+                <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock Text="Microsoft Graph Authentication"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                   Margin="0,0,0,8"/>
+                        <TextBlock Text="Configure Azure AD App credentials for Microsoft 365 Exchange email."
+                                   FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Margin="0,0,0,12"/>
+
+                        <TextBlock Text="Tenant ID (Directory ID)" FontWeight="Medium" Margin="0,0,0,4"
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+                        <ui:TextBox Text="{Binding TenantId, UpdateSourceTrigger=PropertyChanged}"
+                                    PlaceholderText="e.g. common or 00000000-0000-0000-0000-000000000000"
+                                    Margin="0,0,0,12"/>
+
+                        <TextBlock Text="Client ID (Application ID)" FontWeight="Medium" Margin="0,0,0,4"
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+                        <ui:TextBox Text="{Binding ClientId, UpdateSourceTrigger=PropertyChanged}"
+                                    PlaceholderText="e.g. 00000000-0000-0000-0000-000000000000"
+                                    Margin="0,0,0,12"/>
+
+                        <CheckBox Content="Enable Demo / Mock Mode (use mock data without Azure AD)"
+                                  IsChecked="{Binding DemoMode, Mode=TwoWay}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Section: Preferences -->
+                <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock Text="Display &amp; Sync Preferences"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                   Margin="0,0,0,12"/>
+
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="120"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Page Size" FontWeight="Medium" Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+                                <TextBlock Text="Number of emails to load per folder" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                            </StackPanel>
+                            <ui:TextBox Grid.Column="1" Text="{Binding PageSize, UpdateSourceTrigger=PropertyChanged}"/>
+                        </Grid>
+
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="120"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Refresh Interval (seconds)" FontWeight="Medium" Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+                                <TextBlock Text="Interval for background email checks" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                            </StackPanel>
+                            <ui:TextBox Grid.Column="1" Text="{Binding RefreshIntervalSeconds, UpdateSourceTrigger=PropertyChanged}"/>
+                        </Grid>
+
+                        <CheckBox Content="Enable background auto-refresh"
+                                  IsChecked="{Binding AutoRefreshEnabled, Mode=TwoWay}" Margin="0,0,0,12"/>
+
+                        <TextBlock Text="Reading Pane Position" FontWeight="Medium" Margin="0,0,0,4"
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton Content="Right" IsChecked="{Binding ReadingPaneLayout, Converter={StaticResource InverseBoolToVis}}"
+                                         GroupName="ReadingPaneGroup" Margin="0,0,16,0"
+                                         Click="OnLayoutRadioClick" Tag="Right"/>
+                            <RadioButton Content="Bottom"
+                                         GroupName="ReadingPaneGroup" Margin="0,0,16,0"
+                                         Click="OnLayoutRadioClick" Tag="Bottom"/>
+                            <RadioButton Content="Off (Hidden)"
+                                         GroupName="ReadingPaneGroup"
+                                         Click="OnLayoutRadioClick" Tag="Off"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Section: Storage Info -->
+                <Border Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" CornerRadius="8" Padding="16">
+                    <StackPanel>
+                        <TextBlock Text="Storage Paths"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                   Margin="0,0,0,8"/>
+                        <TextBlock Text="Config file:" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                        <TextBlock Text="{Binding ConfigPath}" FontSize="11" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,6"/>
+                        <TextBlock Text="Rules directory:" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                        <TextBlock Text="{Binding RulesDirectory}" FontSize="11" Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,6"/>
+                        <TextBlock Text="Folder preferences:" FontSize="11" Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                        <TextBlock Text="{Binding EmailPreferencesPath}" FontSize="11" Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Actions -->
+        <Grid Grid.Row="2" Margin="0,12,0,0">
+            <ui:Button Content="Reset Defaults" Appearance="Secondary" HorizontalAlignment="Left" Command="{Binding ResetDefaultsCommand}"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <ui:Button Content="Cancel" Appearance="Secondary" Margin="0,0,8,0" Click="OnCancelClick"/>
+                <ui:Button Content="Save Settings" Appearance="Primary" Command="{Binding SaveCommand}"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</ui:FluentWindow>
