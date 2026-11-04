@@ -25,6 +25,7 @@ public class EmailPreferences
     public int RefreshIntervalSeconds { get; set; } = 120;
     public bool AutoRefreshEnabled { get; set; } = true;
     public bool DarkTheme { get; set; } = true;
+    public bool DarkModeReadingPane { get; set; } = true;
     public Dictionary<string, FolderPreference> Folders { get; set; } = new();
 }
 

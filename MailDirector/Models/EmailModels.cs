@@ -86,17 +86,39 @@ public class EmailItem : INotifyPropertyChanged
         set => SetProperty(ref _subject, value);
     }
 
+    public static string CleanPreview(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+        var cleaned = System.Text.RegularExpressions.Regex.Replace(text, @"[\r\n\t]+", " ");
+        cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"\s{2,}", " ");
+        return cleaned.Trim();
+    }
+
     public string BodyPreview
     {
         get => _bodyPreview;
-        set => SetProperty(ref _bodyPreview, value);
+        set
+        {
+            if (SetProperty(ref _bodyPreview, CleanPreview(value)))
+            {
+                OnPropertyChanged(nameof(DisplayBody));
+            }
+        }
     }
 
     public string? Body
     {
         get => _body;
-        set => SetProperty(ref _body, value);
+        set
+        {
+            if (SetProperty(ref _body, value))
+            {
+                OnPropertyChanged(nameof(DisplayBody));
+            }
+        }
     }
+
+    public string DisplayBody => !string.IsNullOrWhiteSpace(Body) ? Body : BodyPreview;
 
     public DateTimeOffset ReceivedDateTime
     {
@@ -136,6 +158,11 @@ public class EmailItem : INotifyPropertyChanged
         storage = value;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         return true;
+    }
+
+    protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 
     public static EmailItem FromDto(EmailDto dto, IEnumerable<MatchingRuleDto>? matchingRules = null)

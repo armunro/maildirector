@@ -124,4 +124,96 @@ public class MainViewModelTests : IDisposable
         _mainViewModel.ReadingPaneLayout = "Off";
         Assert.False(_mainViewModel.IsReadingPaneVisible);
     }
+
+    [Fact]
+    public void BodyPreview_JoinedToSingleLine()
+    {
+        var item = new EmailItem
+        {
+            BodyPreview = "Line 1\r\nLine 2\n\tLine 3   with   spaces\rLine 4"
+        };
+
+        Assert.Equal("Line 1 Line 2 Line 3 with spaces Line 4", item.BodyPreview);
+
+        var converter = new MailDirector.Converters.SingleLineConverter();
+        var converted = converter.Convert("Line A\r\nLine B\nLine C", typeof(string), null, System.Globalization.CultureInfo.InvariantCulture);
+        Assert.Equal("Line A Line B Line C", converted);
+    }
+
+    [Fact]
+    public void DisplayBody_ReturnsBody_WhenBodyPresent()
+    {
+        var item = new EmailItem
+        {
+            BodyPreview = "Short preview",
+            Body = "<div><p>Full email html content</p></div>"
+        };
+
+        Assert.Equal("<div><p>Full email html content</p></div>", item.DisplayBody);
+    }
+
+    [Fact]
+    public void DisplayBody_FallsBackToBodyPreview_WhenBodyNullOrEmpty()
+    {
+        var item = new EmailItem
+        {
+            BodyPreview = "Short preview only",
+            Body = null
+        };
+
+        Assert.Equal("Short preview only", item.DisplayBody);
+
+        item.Body = "   ";
+        Assert.Equal("Short preview only", item.DisplayBody);
+    }
+
+    [Fact]
+    public void PrepareHtml_FormatsHtmlAndPlainTextCorrectly()
+    {
+        var plainResult = MailDirector.Helpers.WebBrowserHelper.PrepareHtml("Hello World\nLine 2");
+        Assert.Contains("Hello World<br/>Line 2", plainResult);
+        Assert.Contains("IE=edge", plainResult);
+        Assert.Contains("#ffffff", plainResult);
+
+        var plainDarkResult = MailDirector.Helpers.WebBrowserHelper.PrepareHtml("Hello World\nLine 2", isDarkMode: true);
+        Assert.Contains("Hello World<br/>Line 2", plainDarkResult);
+        Assert.Contains("IE=edge", plainDarkResult);
+        Assert.Contains("#1e1e1e", plainDarkResult);
+
+        var htmlSnippet = "<div><h3>Title</h3><p>Paragraph</p></div>";
+        var htmlResult = MailDirector.Helpers.WebBrowserHelper.PrepareHtml(htmlSnippet, isDarkMode: false);
+        Assert.Contains(htmlSnippet, htmlResult);
+        Assert.Contains("IE=edge", htmlResult);
+        Assert.Contains("#ffffff", htmlResult);
+
+        var htmlDarkResult = MailDirector.Helpers.WebBrowserHelper.PrepareHtml(htmlSnippet, isDarkMode: true);
+        Assert.Contains(htmlSnippet, htmlDarkResult);
+        Assert.Contains("IE=edge", htmlDarkResult);
+        Assert.Contains("#1e1e1e", htmlDarkResult);
+
+        var fullHtml = "<html><head><title>Test</title></head><body><h1>Content</h1></body></html>";
+        var fullHtmlResult = MailDirector.Helpers.WebBrowserHelper.PrepareHtml(fullHtml, isDarkMode: false);
+        Assert.Contains("IE=edge", fullHtmlResult);
+        Assert.Contains("<h1>Content</h1>", fullHtmlResult);
+
+        var fullHtmlDarkResult = MailDirector.Helpers.WebBrowserHelper.PrepareHtml(fullHtml, isDarkMode: true);
+        Assert.Contains("IE=edge", fullHtmlDarkResult);
+        Assert.Contains("<h1>Content</h1>", fullHtmlDarkResult);
+        Assert.Contains("#1e1e1e !important", fullHtmlDarkResult);
+        Assert.Contains("table, thead, tbody, tfoot, tr, td, th, div", fullHtmlDarkResult);
+    }
+
+    [Fact]
+    public void IsReadingPaneDarkMode_TogglesAndPersistsPreference()
+    {
+        Assert.True(_mainViewModel.IsReadingPaneDarkMode);
+
+        _mainViewModel.ToggleReadingPaneDarkModeCommand.Execute(null);
+        Assert.False(_mainViewModel.IsReadingPaneDarkMode);
+        Assert.False(_settingsService.Config.EmailPreferences.DarkModeReadingPane);
+
+        _mainViewModel.IsReadingPaneDarkMode = true;
+        Assert.True(_mainViewModel.IsReadingPaneDarkMode);
+        Assert.True(_settingsService.Config.EmailPreferences.DarkModeReadingPane);
+    }
 }

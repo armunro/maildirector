@@ -43,6 +43,7 @@ public class MainViewModel : BaseViewModel
     private int _ruleProgressPercent;
 
     private string _readingPaneLayout = "Right"; // Right, Bottom, Off
+    private bool _isReadingPaneDarkMode = true;
 
     // Dialog & Navigation events
     public event EventHandler? RequestOpenRulesManager;
@@ -192,6 +193,19 @@ public class MainViewModel : BaseViewModel
     public bool IsReadingPaneBottom => ReadingPaneLayout == "Bottom";
     public bool IsReadingPaneVisible => ReadingPaneLayout != "Off";
 
+    public bool IsReadingPaneDarkMode
+    {
+        get => _isReadingPaneDarkMode;
+        set
+        {
+            if (SetProperty(ref _isReadingPaneDarkMode, value))
+            {
+                _settingsService.Config.EmailPreferences.DarkModeReadingPane = value;
+                _settingsService.SaveDebounced();
+            }
+        }
+    }
+
     // Commands
     public ICommand RefreshCommand { get; }
     public ICommand ToggleSidebarCommand { get; }
@@ -218,6 +232,7 @@ public class MainViewModel : BaseViewModel
     public ICommand OpenAddSenderToRuleDialogCommand { get; }
     public ICommand OpenSettingsCommand { get; }
     public ICommand SetLayoutCommand { get; }
+    public ICommand ToggleReadingPaneDarkModeCommand { get; }
     public ICommand ClearSearchCommand { get; }
 
     public MainViewModel(
@@ -234,6 +249,8 @@ public class MainViewModel : BaseViewModel
         _readingPaneLayout = !string.IsNullOrEmpty(_settingsService.Config.EmailPreferences.ReadingPaneLayout)
             ? _settingsService.Config.EmailPreferences.ReadingPaneLayout
             : "Right";
+
+        _isReadingPaneDarkMode = _settingsService.Config.EmailPreferences.DarkModeReadingPane;
 
         _ruleService.RulesChanged += (s, e) => LoadRules();
 
@@ -275,6 +292,7 @@ public class MainViewModel : BaseViewModel
 
         OpenSettingsCommand = new RelayCommand(() => RequestOpenSettings?.Invoke(this, EventArgs.Empty));
         SetLayoutCommand = new RelayCommand<string>(layout => { if (!string.IsNullOrEmpty(layout)) ReadingPaneLayout = layout; });
+        ToggleReadingPaneDarkModeCommand = new RelayCommand(() => IsReadingPaneDarkMode = !IsReadingPaneDarkMode);
         ClearSearchCommand = new RelayCommand(() => SearchText = string.Empty);
 
         // Auto refresh timer

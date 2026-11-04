@@ -40,6 +40,12 @@ public class FilterCriteriaViewModel : BaseViewModel
         set => SetProperty(ref _hasAttachments, value);
     }
 
+    public bool IsEmpty =>
+        string.IsNullOrWhiteSpace(FromString) &&
+        string.IsNullOrWhiteSpace(SubjectContainsString) &&
+        string.IsNullOrWhiteSpace(BodyContainsString) &&
+        HasAttachments == null;
+
     public static FilterCriteriaViewModel FromModel(FilterCriteria criteria)
     {
         return new FilterCriteriaViewModel
@@ -225,14 +231,17 @@ public class RulesManagerViewModel : BaseViewModel
         LoadAllRules();
     }
 
-    public void LoadAllRules()
+    public void LoadAllRules(string? selectRuleName = null)
     {
         var all = _ruleService.GetAllRules();
         Rules = new ObservableCollection<FilterRule>(all);
 
         if (Rules.Count > 0)
         {
-            SelectedRule = Rules[0];
+            var targetRule = !string.IsNullOrEmpty(selectRuleName)
+                ? Rules.FirstOrDefault(r => r.Name.Equals(selectRuleName, StringComparison.OrdinalIgnoreCase))
+                : null;
+            SelectedRule = targetRule ?? Rules[0];
         }
         else
         {
@@ -309,9 +318,19 @@ public class RulesManagerViewModel : BaseViewModel
 
     private void RemoveFilter(FilterCriteriaViewModel? filter)
     {
-        if (filter != null && Filters.Count > 1)
+        if (filter != null)
         {
-            Filters.Remove(filter);
+            if (Filters.Count > 1)
+            {
+                Filters.Remove(filter);
+            }
+            else
+            {
+                filter.FromString = string.Empty;
+                filter.SubjectContainsString = string.Empty;
+                filter.BodyContainsString = string.Empty;
+                filter.HasAttachments = null;
+            }
         }
     }
 
@@ -322,9 +341,17 @@ public class RulesManagerViewModel : BaseViewModel
 
     private void RemoveAction(RuleActionViewModel? action)
     {
-        if (action != null && Actions.Count > 1)
+        if (action != null)
         {
-            Actions.Remove(action);
+            if (Actions.Count > 1)
+            {
+                Actions.Remove(action);
+            }
+            else
+            {
+                action.Type = ActionType.MarkAsRead;
+                action.Value = null;
+            }
         }
     }
 
@@ -332,21 +359,29 @@ public class RulesManagerViewModel : BaseViewModel
     {
         if (string.IsNullOrWhiteSpace(Name)) return;
 
+        var validFilters = Filters
+            .Where(f => !f.IsEmpty)
+            .Select(f => f.ToModel())
+            .ToList();
+
+        var validActions = Actions
+            .Select(a => a.ToModel())
+            .ToList();
+
         var rule = new FilterRule
         {
             Name = Name.Trim(),
             OriginalName = _originalName,
             Color = Color,
             RootFolder = RootFolder,
-            Filters = Filters.Select(f => f.ToModel()).ToList(),
-            Actions = Actions.Select(a => a.ToModel()).ToList()
+            Filters = validFilters,
+            Actions = validActions
         };
 
         await _ruleService.SaveRuleAsync(rule);
         _originalName = rule.Name;
 
-        LoadAllRules();
-        SelectedRule = Rules.FirstOrDefault(r => r.Name.Equals(rule.Name, StringComparison.OrdinalIgnoreCase));
+        LoadAllRules(rule.Name);
         StatusMessage = $"Rule '{rule.Name}' saved successfully.";
     }
 

@@ -18,6 +18,7 @@ public class SettingsViewModel : BaseViewModel
     private int _refreshIntervalSeconds = 120;
     private bool _autoRefreshEnabled = true;
     private string _readingPaneLayout = "Right";
+    private bool _darkModeReadingPane = true;
     private string? _statusMessage;
 
     public string TenantId
@@ -62,6 +63,12 @@ public class SettingsViewModel : BaseViewModel
         set => SetProperty(ref _readingPaneLayout, value);
     }
 
+    public bool DarkModeReadingPane
+    {
+        get => _darkModeReadingPane;
+        set => SetProperty(ref _darkModeReadingPane, value);
+    }
+
     public string? StatusMessage
     {
         get => _statusMessage;
@@ -98,6 +105,7 @@ public class SettingsViewModel : BaseViewModel
         RefreshIntervalSeconds = cfg.EmailPreferences.RefreshIntervalSeconds > 0 ? cfg.EmailPreferences.RefreshIntervalSeconds : 120;
         AutoRefreshEnabled = cfg.EmailPreferences.AutoRefreshEnabled;
         ReadingPaneLayout = !string.IsNullOrEmpty(cfg.EmailPreferences.ReadingPaneLayout) ? cfg.EmailPreferences.ReadingPaneLayout : "Right";
+        DarkModeReadingPane = cfg.EmailPreferences.DarkModeReadingPane;
     }
 
     private void Save()
@@ -110,6 +118,7 @@ public class SettingsViewModel : BaseViewModel
         cfg.EmailPreferences.RefreshIntervalSeconds = RefreshIntervalSeconds;
         cfg.EmailPreferences.AutoRefreshEnabled = AutoRefreshEnabled;
         cfg.EmailPreferences.ReadingPaneLayout = ReadingPaneLayout;
+        cfg.EmailPreferences.DarkModeReadingPane = DarkModeReadingPane;
 
         _settingsService.Save(true);
         StatusMessage = "Settings saved successfully.";
@@ -123,5 +132,6 @@ public class SettingsViewModel : BaseViewModel
         RefreshIntervalSeconds = 120;
         AutoRefreshEnabled = true;
         ReadingPaneLayout = "Right";
+        DarkModeReadingPane = true;
     }
 }

@@ -4,6 +4,7 @@
         xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
         xmlns:models="clr-namespace:MailDirector.Models"
         xmlns:viewModels="clr-namespace:MailDirector.ViewModels"
+        xmlns:helpers="clr-namespace:MailDirector.Helpers"
         Title="MailDirector"
         Width="1280" Height="800"
         MinWidth="960" MinHeight="600"
@@ -322,83 +323,11 @@
                                  ItemsSource="{Binding Emails}"
                                  SelectedItem="{Binding SelectedEmail, Mode=TwoWay}"
                                  ItemContainerStyle="{StaticResource EmailListItemStyle}"
+                                 ItemTemplate="{StaticResource EmailListItemTemplate}"
                                  BorderThickness="0"
                                  Background="Transparent"
                                  Padding="12"
-                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate DataType="{x:Type models:EmailItem}">
-                                    <Grid>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                        </Grid.RowDefinitions>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-
-                                        <!-- Unread Indicator Dot -->
-                                        <Ellipse Grid.Row="0" Grid.Column="0" Width="8" Height="8"
-                                                 Fill="{DynamicResource SystemAccentColorPrimaryBrush}"
-                                                 Visibility="{Binding IsRead, Converter={StaticResource InverseBoolToVis}}"
-                                                 Margin="0,0,8,0" VerticalAlignment="Center"/>
-
-                                        <!-- Sender Avatar & Name -->
-                                        <TextBlock Grid.Row="0" Grid.Column="1"
-                                                   Text="{Binding From}"
-                                                   FontWeight="SemiBold"
-                                                   FontSize="13"
-                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                                   TextTrimming="CharacterEllipsis"/>
-
-                                        <!-- Date -->
-                                        <TextBlock Grid.Row="0" Grid.Column="2"
-                                                   Text="{Binding ReceivedDateTime, Converter={StaticResource FriendlyDate}}"
-                                                   FontSize="11"
-                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-
-                                        <!-- Subject -->
-                                        <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2"
-                                                   Text="{Binding Subject}"
-                                                   FontSize="12"
-                                                   FontWeight="Medium"
-                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   Margin="0,3,0,3"/>
-
-                                        <!-- Preview -->
-                                        <TextBlock Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2"
-                                                   Text="{Binding BodyPreview, Converter={StaticResource Truncate}, ConverterParameter=100}"
-                                                   FontSize="11"
-                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                                   TextTrimming="CharacterEllipsis"
-                                                   Margin="0,0,0,4"/>
-
-                                        <!-- Matching Rule Badges Ribbon -->
-                                        <ItemsControl Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2"
-                                                      ItemsSource="{Binding MatchingRules}">
-                                            <ItemsControl.ItemsPanel>
-                                                <ItemsPanelTemplate>
-                                                    <WrapPanel Orientation="Horizontal"/>
-                                                </ItemsPanelTemplate>
-                                            </ItemsControl.ItemsPanel>
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate DataType="{x:Type models:MatchingRuleDto}">
-                                                    <Border Background="{Binding Color, Converter={StaticResource HexColorBrush}}"
-                                                            CornerRadius="4" Padding="6,2" Margin="0,0,4,2">
-                                                        <TextBlock Text="{Binding Name}" FontSize="10" FontWeight="SemiBold" Foreground="White"/>
-                                                    </Border>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </Grid>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"/>
                     </Grid>
 
                     <!-- Splitter 2 -->
@@ -432,6 +361,11 @@
 
                                 <!-- Quick Actions -->
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                                    <ui:Button Appearance="Secondary"
+                                               Icon="{ui:SymbolIcon Symbol=DarkTheme24}"
+                                               Command="{Binding ToggleReadingPaneDarkModeCommand}"
+                                               ToolTip="Toggle Reading Pane Dark/Light Mode"
+                                               Margin="0,0,4,0"/>
                                     <ui:Button Appearance="Secondary"
                                                Icon="{ui:SymbolIcon Symbol=Archive24}"
                                                Command="{Binding ArchiveEmailCommand}"
@@ -470,30 +404,29 @@
                                     </Border>
 
                                     <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding SelectedEmail.From}" FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
-                                        <TextBlock Text="{Binding SelectedEmail.FromAddress}" FontSize="11"
-                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                        <!-- Row 1: Sender Name & Email Address -->
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                                            <TextBlock Text="{Binding SelectedEmail.From}" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                                       Margin="0,0,8,0"/>
+                                            <TextBlock Text="{Binding SelectedEmail.FromAddress, StringFormat='&lt;{0}&gt;'}" FontSize="12"
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                       VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                        <!-- Row 2: Date / Time Received -->
+                                        <TextBlock Text="{Binding SelectedEmail.ReceivedDateTime, Converter={StaticResource FriendlyDate}}"
+                                                   FontSize="11"
+                                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"/>
                                     </StackPanel>
-
-                                    <TextBlock Grid.Column="2"
-                                               Text="{Binding SelectedEmail.ReceivedDateTime, Converter={StaticResource FriendlyDate}}"
-                                               FontSize="11"
-                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                               VerticalAlignment="Center"/>
                                 </Grid>
                             </Border>
 
                             <!-- Rule Action Shortcuts -->
                             <Border Grid.Row="2" Margin="0,0,0,12">
                                 <StackPanel Orientation="Horizontal">
-                                    <ui:Button Content="+ Create Rule for Sender"
+                                    <ui:Button Content="Rule"
                                                Appearance="Secondary"
                                                Command="{Binding OpenCreateRuleDialogCommand}"
-                                               Margin="0,0,8,0"/>
-                                    <ui:Button Content="+ Add to Existing Rule"
-                                               Appearance="Secondary"
-                                               Command="{Binding OpenAddSenderToRuleDialogCommand}"
                                                Margin="0,0,8,0"/>
 
                                     <!-- Apply Single Rule Dropdown -->
@@ -516,14 +449,9 @@
                             <!-- Email Body Viewer -->
                             <Border Grid.Row="3"
                                     Background="{DynamicResource ControlFillColorDefaultBrush}"
-                                    CornerRadius="6" Padding="16">
-                                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                    <TextBlock Text="{Binding SelectedEmail.BodyPreview}"
-                                               FontSize="13"
-                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                                               TextWrapping="Wrap"
-                                               LineHeight="20"/>
-                                </ScrollViewer>
+                                    CornerRadius="6" Padding="0" ClipToBounds="True">
+                                <WebBrowser helpers:WebBrowserHelper.Html="{Binding SelectedEmail.DisplayBody}"
+                                            helpers:WebBrowserHelper.IsDarkMode="{Binding IsReadingPaneDarkMode}"/>
                             </Border>
                         </Grid>
                     </Border>
@@ -542,6 +470,7 @@
                              ItemsSource="{Binding Emails}"
                              SelectedItem="{Binding SelectedEmail, Mode=TwoWay}"
                              ItemContainerStyle="{StaticResource EmailListItemStyle}"
+                             ItemTemplate="{StaticResource EmailListItemTemplate}"
                              BorderThickness="0"
                              Background="Transparent"
                              Padding="12"/>
@@ -552,17 +481,65 @@
                     <Border Grid.Row="2"
                             Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                             Padding="24,16">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <StackPanel>
-                                <TextBlock Text="{Binding SelectedEmail.Subject}"
+                        <Grid Visibility="{Binding SelectedEmail, Converter={StaticResource NullToVis}}">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <Grid Grid.Row="0" Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Column="0"
+                                           Text="{Binding SelectedEmail.Subject}"
                                            FontSize="16" FontWeight="Bold"
-                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,8"/>
+                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                                           TextWrapping="Wrap"/>
+
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                                    <ui:Button Appearance="Secondary"
+                                               Icon="{ui:SymbolIcon Symbol=DarkTheme24}"
+                                               Command="{Binding ToggleReadingPaneDarkModeCommand}"
+                                               ToolTip="Toggle Reading Pane Dark/Light Mode"
+                                               Margin="0,0,4,0"/>
+                                    <ui:Button Appearance="Secondary"
+                                               Icon="{ui:SymbolIcon Symbol=Archive24}"
+                                               Command="{Binding ArchiveEmailCommand}"
+                                               ToolTip="Archive Email"
+                                               Margin="0,0,4,0"/>
+                                    <ui:Button Appearance="Danger"
+                                               Icon="{ui:SymbolIcon Symbol=Delete24}"
+                                               Command="{Binding DeleteEmailCommand}"
+                                               ToolTip="Delete Email"
+                                               Margin="0,0,4,0"/>
+                                    <ui:Button Appearance="Secondary"
+                                               Icon="{ui:SymbolIcon Symbol=Open24}"
+                                               Command="{Binding OpenInWebCommand}"
+                                               ToolTip="Open in Browser"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,12">
                                 <TextBlock Text="{Binding SelectedEmail.From}" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,0,12"/>
-                                <TextBlock Text="{Binding SelectedEmail.BodyPreview}"
-                                           FontSize="13" Foreground="{DynamicResource TextFillColorPrimaryBrush}" TextWrapping="Wrap"/>
+                                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" Margin="0,0,8,0"/>
+                                <TextBlock Text="{Binding SelectedEmail.FromAddress, StringFormat='&lt;{0}&gt;'}" FontSize="12"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                <TextBlock Text="{Binding SelectedEmail.ReceivedDateTime, Converter={StaticResource FriendlyDate}}"
+                                           FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}" VerticalAlignment="Center"/>
                             </StackPanel>
-                        </ScrollViewer>
+
+                            <!-- Email Body Viewer -->
+                            <Border Grid.Row="2"
+                                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                    CornerRadius="6" Padding="0" ClipToBounds="True">
+                                <WebBrowser helpers:WebBrowserHelper.Html="{Binding SelectedEmail.DisplayBody}"
+                                            helpers:WebBrowserHelper.IsDarkMode="{Binding IsReadingPaneDarkMode}"/>
+                            </Border>
+                        </Grid>
                     </Border>
                 </Grid>
 
@@ -571,6 +548,7 @@
                     <ListBox ItemsSource="{Binding Emails}"
                              SelectedItem="{Binding SelectedEmail, Mode=TwoWay}"
                              ItemContainerStyle="{StaticResource EmailListItemStyle}"
+                             ItemTemplate="{StaticResource EmailListItemTemplate}"
                              BorderThickness="0"
                              Background="Transparent"
                              Padding="16"/>
@@ -597,7 +575,7 @@
               Background="#80000000"
               Visibility="{Binding IsApplyingRule, Converter={StaticResource BoolToVis}}">
             <Border Width="420"
-                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                    Background="{DynamicResource ApplicationBackgroundBrush}"
                     BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
                     BorderThickness="1"
                     CornerRadius="10"

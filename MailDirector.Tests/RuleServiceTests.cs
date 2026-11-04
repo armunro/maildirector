@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using MailDirector.Models;
 using MailDirector.Services;
+using MailDirector.ViewModels;
 using Xunit;
 
 namespace MailDirector.Tests;
@@ -230,5 +231,81 @@ public class RuleServiceTests : IDisposable
         Assert.NotNull(updatedEmail1);
         Assert.True(updatedEmail1.IsRead);
         Assert.True(updatedEmail1.IsFlagged);
+    }
+
+    [Fact]
+    public void Matches_EmptyFilters_ReturnsFalse()
+    {
+        var rule = new FilterRule
+        {
+            Name = "Empty Filters Rule",
+            Filters = new List<FilterCriteria>()
+        };
+
+        var email = new EmailDto("1", "Sender", "sender@test.com", "Subject", "Body", DateTimeOffset.Now, "link");
+        Assert.False(_ruleService.Matches(rule, email));
+    }
+
+    [Fact]
+    public void Matches_EmptyCriteriaFields_ReturnsFalse()
+    {
+        var rule = new FilterRule
+        {
+            Name = "Blank Criteria Rule",
+            Filters = new List<FilterCriteria>
+            {
+                new FilterCriteria()
+            }
+        };
+
+        var email = new EmailDto("1", "Sender", "sender@test.com", "Subject", "Body", DateTimeOffset.Now, "link");
+        Assert.False(_ruleService.Matches(rule, email));
+    }
+
+    [Fact]
+    public async Task RulesManagerViewModel_RemovingEmailAddressAndSaving_PersistsChanges()
+    {
+        var rule = new FilterRule
+        {
+            Name = "Edit Rule Test",
+            Color = "#123456",
+            Filters = new List<FilterCriteria>
+            {
+                new FilterCriteria { From = new List<string> { "first@test.com", "second@test.com" } }
+            },
+            Actions = new List<RuleAction>
+            {
+                new RuleAction { Type = ActionType.MarkAsRead }
+            }
+        };
+
+        await _ruleService.SaveRuleAsync(rule);
+
+        var vm = new RulesManagerViewModel(_ruleService);
+        var targetRule = vm.Rules.First(r => r.Name == "Edit Rule Test");
+        vm.SelectedRule = targetRule;
+
+        Assert.Single(vm.Filters);
+        Assert.Equal("first@test.com, second@test.com", vm.Filters[0].FromString);
+
+        // Remove second@test.com
+        vm.Filters[0].FromString = "first@test.com";
+        vm.SaveRuleCommand.Execute(null);
+
+        await Task.Delay(50);
+
+        var loaded = _ruleService.GetAllRules().First(r => r.Name == "Edit Rule Test");
+        Assert.Single(loaded.Filters[0].From!);
+        Assert.Equal("first@test.com", loaded.Filters[0].From![0]);
+
+        // Clear all email addresses
+        vm.SelectedRule = loaded;
+        vm.Filters[0].FromString = "";
+        vm.SaveRuleCommand.Execute(null);
+
+        await Task.Delay(50);
+
+        var loadedEmpty = _ruleService.GetAllRules().First(r => r.Name == "Edit Rule Test");
+        Assert.Empty(loadedEmpty.Filters);
     }
 }

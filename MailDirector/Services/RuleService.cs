@@ -235,12 +235,15 @@ public class RuleService : IRuleService
 
         lock (_lock)
         {
-            var existing = _rules.FirstOrDefault(r => r.Name.Equals(rule.Name, StringComparison.OrdinalIgnoreCase));
-            if (existing != null)
+            var index = _rules.FindIndex(r => r.Name.Equals(rule.Name, StringComparison.OrdinalIgnoreCase));
+            if (index >= 0)
             {
-                _rules.Remove(existing);
+                _rules[index] = rule;
             }
-            _rules.Add(rule);
+            else
+            {
+                _rules.Add(rule);
+            }
         }
 
         RulesChanged?.Invoke(this, EventArgs.Empty);
@@ -276,16 +279,19 @@ public class RuleService : IRuleService
     public bool Matches(FilterRule rule, EmailDto email)
     {
         if (rule.Filters == null || !rule.Filters.Any())
-            return true;
+            return false;
 
         return rule.Filters.Any(criteria => MatchesCriteria(criteria, email));
     }
 
     private bool MatchesCriteria(FilterCriteria criteria, EmailDto email)
     {
+        bool hasAnyCondition = false;
+
         // From filter
         if (criteria.From != null && criteria.From.Any())
         {
+            hasAnyCondition = true;
             bool matchesFrom = criteria.From.Any(f =>
                 (!string.IsNullOrEmpty(email.From) && email.From.Contains(f, StringComparison.OrdinalIgnoreCase)) ||
                 (!string.IsNullOrEmpty(email.FromAddress) && email.FromAddress.Contains(f, StringComparison.OrdinalIgnoreCase)));
@@ -296,6 +302,7 @@ public class RuleService : IRuleService
         // Subject filter
         if (criteria.SubjectContains != null && criteria.SubjectContains.Any())
         {
+            hasAnyCondition = true;
             bool matchesSubject = criteria.SubjectContains.Any(s =>
                 !string.IsNullOrEmpty(email.Subject) && email.Subject.Contains(s, StringComparison.OrdinalIgnoreCase));
 
@@ -305,6 +312,7 @@ public class RuleService : IRuleService
         // Body filter
         if (criteria.BodyContains != null && criteria.BodyContains.Any())
         {
+            hasAnyCondition = true;
             bool matchesBody = criteria.BodyContains.Any(b =>
                 (!string.IsNullOrEmpty(email.BodyPreview) && email.BodyPreview.Contains(b, StringComparison.OrdinalIgnoreCase)) ||
                 (!string.IsNullOrEmpty(email.Body) && email.Body.Contains(b, StringComparison.OrdinalIgnoreCase)));
@@ -312,7 +320,7 @@ public class RuleService : IRuleService
             if (!matchesBody) return false;
         }
 
-        return true;
+        return hasAnyCondition;
     }
 
     public async Task<FilterRule> CreateRuleFromEmailAsync(string messageId, string? ruleName = null)

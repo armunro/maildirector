@@ -93,6 +93,9 @@
                         <CheckBox Content="Enable background auto-refresh"
                                   IsChecked="{Binding AutoRefreshEnabled, Mode=TwoWay}" Margin="0,0,0,12"/>
 
+                        <CheckBox Content="Dark Mode for email reading pane"
+                                  IsChecked="{Binding DarkModeReadingPane, Mode=TwoWay}" Margin="0,0,0,12"/>
+
                         <TextBlock Text="Reading Pane Position" FontWeight="Medium" Margin="0,0,0,4"
                                    Foreground="{DynamicResource TextFillColorPrimaryBrush}"/>
                         <StackPanel Orientation="Horizontal">
