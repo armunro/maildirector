@@ -623,11 +623,7 @@ public class MainViewModel : BaseViewModel
 
         try
         {
-            var pageSize = _settingsService.Config.EmailPreferences.PageSize > 0
-                ? _settingsService.Config.EmailPreferences.PageSize
-                : 100;
-            var emails = (await _emailService.GetEmailsAsync(folder.Id, Math.Max(pageSize, 100))).ToList();
-            var unreadEmails = emails.Where(e => !e.IsRead).ToList();
+            var unreadEmails = (await _emailService.GetUnreadEmailsAsync(folder.Id)).ToList();
 
             RuleProgressTotal = unreadEmails.Count;
             if (RuleProgressTotal == 0)
@@ -648,19 +644,31 @@ public class MainViewModel : BaseViewModel
                 RuleProgressPercent = RuleProgressTotal > 0 ? (int)((double)current / RuleProgressTotal * 100) : 100;
 
                 await _emailService.ApplyRuleActionsAsync(email.Id, markReadAction);
+
+                if (SelectedFolder != null && SelectedFolder.Id.Equals(folder.Id, StringComparison.OrdinalIgnoreCase))
+                {
+                    var rawMatch = _rawEmails.FirstOrDefault(e => e.Id.Equals(email.Id, StringComparison.OrdinalIgnoreCase));
+                    if (rawMatch != null) rawMatch.IsRead = true;
+
+                    var uiMatch = Emails.FirstOrDefault(e => e.Id.Equals(email.Id, StringComparison.OrdinalIgnoreCase));
+                    if (uiMatch != null) uiMatch.IsRead = true;
+                }
             }
 
-            folder.UnreadItemCount = 0;
-
-            if (SelectedFolder != null && SelectedFolder.Id.Equals(folder.Id, StringComparison.OrdinalIgnoreCase))
+            if (!token.IsCancellationRequested)
             {
-                foreach (var email in _rawEmails)
+                folder.UnreadItemCount = 0;
+
+                if (SelectedFolder != null && SelectedFolder.Id.Equals(folder.Id, StringComparison.OrdinalIgnoreCase))
                 {
-                    email.IsRead = true;
-                }
-                foreach (var email in Emails)
-                {
-                    email.IsRead = true;
+                    foreach (var email in _rawEmails)
+                    {
+                        email.IsRead = true;
+                    }
+                    foreach (var email in Emails)
+                    {
+                        email.IsRead = true;
+                    }
                 }
             }
 

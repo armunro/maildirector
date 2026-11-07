@@ -8,6 +8,7 @@ public interface IEmailService
 {
     Task<IEnumerable<MailFolderDto>> GetMailFoldersAsync();
     Task<IEnumerable<EmailDto>> GetEmailsAsync(string folderId = "inbox", int top = 50);
+    Task<IEnumerable<EmailDto>> GetUnreadEmailsAsync(string folderId);
     Task<EmailDto?> GetEmailAsync(string messageId);
     Task MoveEmailToDeletedItemsAsync(string messageId);
     Task MoveEmailToFolderAsync(string messageId, string destinationFolderId);

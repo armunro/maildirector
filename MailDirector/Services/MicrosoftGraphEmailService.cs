@@ -155,6 +155,59 @@ public class MicrosoftGraphEmailService : IEmailService
         }
     }
 
+    public async Task<IEnumerable<EmailDto>> GetUnreadEmailsAsync(string folderId)
+    {
+        try
+        {
+            var client = await GetClientAsync();
+            var allMessages = new List<EmailDto>();
+
+            var messagesResponse = await client.Me.MailFolders[folderId].Messages
+                .GetAsync(config =>
+                {
+                    config.QueryParameters.Filter = "isRead eq false";
+                    config.QueryParameters.Top = 100;
+                    config.QueryParameters.Select = new[] { "id", "subject", "from", "receivedDateTime", "bodyPreview", "webLink", "body", "isRead", "flag", "categories" };
+                    config.QueryParameters.Orderby = new[] { "receivedDateTime desc" };
+                });
+
+            var currentResponse = messagesResponse;
+            while (currentResponse?.Value != null)
+            {
+                foreach (var m in currentResponse.Value)
+                {
+                    allMessages.Add(new EmailDto(
+                        m.Id ?? "",
+                        m.From?.EmailAddress?.Name ?? m.From?.EmailAddress?.Address ?? "Unknown",
+                        m.From?.EmailAddress?.Address ?? "",
+                        m.Subject ?? "(No Subject)",
+                        m.BodyPreview ?? "",
+                        m.ReceivedDateTime ?? DateTimeOffset.MinValue,
+                        m.WebLink ?? "",
+                        m.Body?.Content,
+                        null,
+                        m.IsRead ?? false,
+                        m.Flag?.FlagStatus == FollowupFlagStatus.Flagged,
+                        m.Categories?.ToList()
+                    ));
+                }
+
+                if (string.IsNullOrEmpty(currentResponse.OdataNextLink))
+                    break;
+
+                currentResponse = await client.Me.MailFolders[folderId].Messages
+                    .WithUrl(currentResponse.OdataNextLink)
+                    .GetAsync();
+            }
+
+            return allMessages;
+        }
+        catch
+        {
+            return Enumerable.Empty<EmailDto>();
+        }
+    }
+
     public async Task<EmailDto?> GetEmailAsync(string messageId)
     {
         try

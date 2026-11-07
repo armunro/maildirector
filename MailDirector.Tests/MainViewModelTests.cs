@@ -298,6 +298,27 @@ public class MainViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task MarkFolderAsReadCommand_MarksNonVisibleEmailsAsRead()
+    {
+        await _mainViewModel.InitializeAsync();
+        var inbox = _mainViewModel.Folders.First(f => f.Id.Equals("inbox", StringComparison.OrdinalIgnoreCase));
+        Assert.NotNull(inbox);
+
+        // Set search text to filter out emails or load a different folder
+        _mainViewModel.SearchText = "NonExistentSubjectSearchFilterXYZ";
+        Assert.Empty(_mainViewModel.Emails);
+
+        var unreadBefore = (await _emailService.GetUnreadEmailsAsync(inbox.Id)).ToList();
+        Assert.NotEmpty(unreadBefore);
+
+        await _mainViewModel.MarkFolderAsReadAsync(inbox);
+
+        var unreadAfter = (await _emailService.GetUnreadEmailsAsync(inbox.Id)).ToList();
+        Assert.Empty(unreadAfter);
+        Assert.Equal(0, inbox.UnreadItemCount);
+    }
+
+    [Fact]
     public void ProgressProperties_FormatProperly()
     {
         _mainViewModel.ApplyingRuleName = "TestRule";

@@ -172,6 +172,31 @@ public class MockEmailService : IEmailService
         }
     }
 
+    public Task<IEnumerable<EmailDto>> GetUnreadEmailsAsync(string folderId)
+    {
+        lock (_lock)
+        {
+            var targetFolder = folderId.ToLowerInvariant();
+            var matches = _mockEmails
+                .Where(e =>
+                {
+                    if (!e.IsRead)
+                    {
+                        if (_emailFolderMap.TryGetValue(e.Id, out var fId))
+                        {
+                            return fId.Equals(targetFolder, StringComparison.OrdinalIgnoreCase);
+                        }
+                        return targetFolder == "inbox";
+                    }
+                    return false;
+                })
+                .OrderByDescending(e => e.ReceivedDateTime)
+                .ToList();
+
+            return Task.FromResult<IEnumerable<EmailDto>>(matches);
+        }
+    }
+
     public Task<EmailDto?> GetEmailAsync(string messageId)
     {
         lock (_lock)
