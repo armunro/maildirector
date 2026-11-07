@@ -377,19 +377,6 @@ public class RuleService : IRuleService
         return rule;
     }
 
-    public async Task ApplyRuleAsync(string messageId, string ruleName)
-    {
-        FilterRule? rule;
-        lock (_lock)
-        {
-            rule = _rules.FirstOrDefault(r => r.Name.Equals(ruleName, StringComparison.OrdinalIgnoreCase));
-        }
-
-        if (rule == null) throw new ArgumentException($"Rule '{ruleName}' not found.");
-
-        await _emailService.ApplyRuleActionsAsync(messageId, rule.Actions);
-    }
-
     public async Task ApplyRuleToFolderAsync(string folderId, string ruleName, IProgress<RuleProgressReport>? progress = null, CancellationToken cancellationToken = default)
     {
         FilterRule? rule;

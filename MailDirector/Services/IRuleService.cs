@@ -14,7 +14,6 @@ public interface IRuleService
     bool Matches(FilterRule rule, EmailDto email);
     Task<FilterRule> CreateRuleFromEmailAsync(string messageId, string? ruleName = null);
     Task<FilterRule> AddSenderToRuleAsync(string ruleName, string senderEmail, string subject);
-    Task ApplyRuleAsync(string messageId, string ruleName);
     Task ApplyRuleToFolderAsync(string folderId, string ruleName, IProgress<RuleProgressReport>? progress = null, CancellationToken cancellationToken = default);
     event EventHandler? RulesChanged;
 }

@@ -204,6 +204,18 @@ public class MainViewModelTests : IDisposable
     }
 
     [Fact]
+    public void BoolToVisibilityConverter_SupportsUseHiddenAndInverse()
+    {
+        var conv = new MailDirector.Converters.BoolToVisibilityConverter();
+        Assert.Equal(System.Windows.Visibility.Visible, conv.Convert(true, typeof(System.Windows.Visibility), null, System.Globalization.CultureInfo.InvariantCulture));
+        Assert.Equal(System.Windows.Visibility.Collapsed, conv.Convert(false, typeof(System.Windows.Visibility), null, System.Globalization.CultureInfo.InvariantCulture));
+
+        var inverseHidden = new MailDirector.Converters.BoolToVisibilityConverter { Inverse = true, UseHidden = true };
+        Assert.Equal(System.Windows.Visibility.Hidden, inverseHidden.Convert(true, typeof(System.Windows.Visibility), null, System.Globalization.CultureInfo.InvariantCulture));
+        Assert.Equal(System.Windows.Visibility.Visible, inverseHidden.Convert(false, typeof(System.Windows.Visibility), null, System.Globalization.CultureInfo.InvariantCulture));
+    }
+
+    [Fact]
     public void IsReadingPaneDarkMode_TogglesAndPersistsPreference()
     {
         Assert.True(_mainViewModel.IsReadingPaneDarkMode);
@@ -215,5 +227,51 @@ public class MainViewModelTests : IDisposable
         _mainViewModel.IsReadingPaneDarkMode = true;
         Assert.True(_mainViewModel.IsReadingPaneDarkMode);
         Assert.True(_settingsService.Config.EmailPreferences.DarkModeReadingPane);
+    }
+
+    [Fact]
+    public async Task HasSelectedEmail_TracksSelectedEmailState()
+    {
+        _mainViewModel.SelectedEmail = null;
+        Assert.False(_mainViewModel.HasSelectedEmail);
+        Assert.False(_mainViewModel.DeleteEmailCommand.CanExecute(null));
+        Assert.False(_mainViewModel.ArchiveEmailCommand.CanExecute(null));
+        Assert.False(_mainViewModel.ToggleReadCommand.CanExecute(null));
+        Assert.False(_mainViewModel.ToggleStarCommand.CanExecute(null));
+
+        await _mainViewModel.InitializeAsync();
+        Assert.NotNull(_mainViewModel.SelectedEmail);
+        Assert.True(_mainViewModel.HasSelectedEmail);
+        Assert.True(_mainViewModel.DeleteEmailCommand.CanExecute(null));
+        Assert.True(_mainViewModel.ArchiveEmailCommand.CanExecute(null));
+        Assert.True(_mainViewModel.ToggleReadCommand.CanExecute(null));
+        Assert.True(_mainViewModel.ToggleStarCommand.CanExecute(null));
+
+        _mainViewModel.SelectedEmail = null;
+        Assert.False(_mainViewModel.HasSelectedEmail);
+    }
+
+    [Fact]
+    public async Task ApplyRuleToAllCommand_ExecutesRuleAcrossSelectedFolder()
+    {
+        await _mainViewModel.InitializeAsync();
+        Assert.NotNull(_mainViewModel.SelectedFolder);
+
+        var rule = new FilterRule
+        {
+            Name = "MarkAllReadInFolder",
+            RootFolder = "Inbox",
+            Filters = new List<FilterCriteria> { new FilterCriteria { From = new List<string> { "jira" } } },
+            Actions = new List<RuleAction> { new RuleAction { Type = ActionType.MarkAsRead } }
+        };
+        await _ruleService.SaveRuleAsync(rule);
+        _mainViewModel.LoadRules();
+
+        Assert.True(_mainViewModel.ApplyRuleToAllCommand.CanExecute("MarkAllReadInFolder"));
+        _mainViewModel.ApplyRuleToAllCommand.Execute("MarkAllReadInFolder");
+
+        await Task.Delay(100);
+
+        Assert.Contains("successfully processed", _mainViewModel.StatusMessage);
     }
 }

@@ -98,8 +98,17 @@ public class MainViewModel : BaseViewModel
     public EmailItem? SelectedEmail
     {
         get => _selectedEmail;
-        set => SetProperty(ref _selectedEmail, value);
+        set
+        {
+            if (SetProperty(ref _selectedEmail, value))
+            {
+                OnPropertyChanged(nameof(HasSelectedEmail));
+                CommandManager.InvalidateRequerySuggested();
+            }
+        }
     }
+
+    public bool HasSelectedEmail => SelectedEmail != null;
 
     public string SearchText
     {
@@ -224,7 +233,6 @@ public class MainViewModel : BaseViewModel
     public ICommand ToggleReadCommand { get; }
     public ICommand ToggleStarCommand { get; }
     public ICommand OpenInWebCommand { get; }
-    public ICommand ApplyRuleCommand { get; }
     public ICommand ApplyRuleToAllCommand { get; }
     public ICommand CancelApplyRuleCommand { get; }
     public ICommand OpenRulesManagerCommand { get; }
@@ -273,7 +281,6 @@ public class MainViewModel : BaseViewModel
         ToggleStarCommand = new AsyncRelayCommand(ToggleStarSelectedEmailAsync, () => SelectedEmail != null);
         OpenInWebCommand = new RelayCommand(OpenSelectedEmailInWeb, () => SelectedEmail != null && !string.IsNullOrEmpty(SelectedEmail.WebLink));
 
-        ApplyRuleCommand = new AsyncRelayCommand<string>(ApplyRuleToSelectedEmailAsync, _ => SelectedEmail != null);
         ApplyRuleToAllCommand = new AsyncRelayCommand<string>(ApplyRuleToAllInFolderAsync);
         CancelApplyRuleCommand = new RelayCommand(CancelApplyRule);
 
@@ -667,26 +674,6 @@ public class MainViewModel : BaseViewModel
     }
 
     // Rule Application Methods
-    private async Task ApplyRuleToSelectedEmailAsync(string? ruleName)
-    {
-        if (SelectedEmail == null || string.IsNullOrWhiteSpace(ruleName)) return;
-
-        try
-        {
-            StatusMessage = $"Applying rule '{ruleName}'...";
-            await _ruleService.ApplyRuleAsync(SelectedEmail.Id, ruleName);
-            StatusMessage = $"Rule '{ruleName}' applied.";
-            if (SelectedFolder != null)
-            {
-                await LoadEmailsForFolderAsync(SelectedFolder.Id);
-            }
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = $"Error applying rule: {ex.Message}";
-        }
-    }
-
     private async Task ApplyRuleToAllInFolderAsync(string? ruleName)
     {
         if (SelectedFolder == null || string.IsNullOrWhiteSpace(ruleName)) return;
@@ -711,7 +698,11 @@ public class MainViewModel : BaseViewModel
         try
         {
             await _ruleService.ApplyRuleToFolderAsync(SelectedFolder.Id, ruleName, progress, _ruleCts.Token);
-            StatusMessage = $"Rule '{ruleName}' successfully processed across {SelectedFolder.EffectiveDisplayName}.";
+            if (SelectedFolder != null)
+            {
+                await LoadEmailsForFolderAsync(SelectedFolder.Id);
+            }
+            StatusMessage = $"Rule '{ruleName}' successfully processed across {SelectedFolder?.EffectiveDisplayName}.";
         }
         catch (Exception ex)
         {
@@ -721,10 +712,6 @@ public class MainViewModel : BaseViewModel
         {
             IsApplyingRule = false;
             ApplyingRuleName = null;
-            if (SelectedFolder != null)
-            {
-                await LoadEmailsForFolderAsync(SelectedFolder.Id);
-            }
         }
     }
 
