@@ -36,6 +36,7 @@ public class MainViewModel : BaseViewModel
 
     private ObservableCollection<FilterRule> _rules = new();
     private string? _applyingRuleName;
+    private string? _progressTitle;
     private bool _isApplyingRule;
     private int _ruleProgressCurrent;
     private int _ruleProgressTotal;
@@ -149,7 +150,19 @@ public class MainViewModel : BaseViewModel
     public string? ApplyingRuleName
     {
         get => _applyingRuleName;
-        set => SetProperty(ref _applyingRuleName, value);
+        set
+        {
+            if (SetProperty(ref _applyingRuleName, value))
+            {
+                OnPropertyChanged(nameof(ProgressTitle));
+            }
+        }
+    }
+
+    public string? ProgressTitle
+    {
+        get => _progressTitle ?? (!string.IsNullOrEmpty(_applyingRuleName) ? $"Applying Rule: {_applyingRuleName}" : null);
+        set => SetProperty(ref _progressTitle, value);
     }
 
     public bool IsApplyingRule
@@ -161,14 +174,30 @@ public class MainViewModel : BaseViewModel
     public int RuleProgressCurrent
     {
         get => _ruleProgressCurrent;
-        set => SetProperty(ref _ruleProgressCurrent, value);
+        set
+        {
+            if (SetProperty(ref _ruleProgressCurrent, value))
+            {
+                OnPropertyChanged(nameof(RuleProgressStatusText));
+            }
+        }
     }
 
     public int RuleProgressTotal
     {
         get => _ruleProgressTotal;
-        set => SetProperty(ref _ruleProgressTotal, value);
+        set
+        {
+            if (SetProperty(ref _ruleProgressTotal, value))
+            {
+                OnPropertyChanged(nameof(RuleProgressStatusText));
+            }
+        }
     }
+
+    public string RuleProgressStatusText => _ruleProgressTotal > 0
+        ? $"Processing {_ruleProgressCurrent} of {_ruleProgressTotal}"
+        : $"Processing {_ruleProgressCurrent}";
 
     public string? RuleProgressSubject
     {
@@ -225,6 +254,7 @@ public class MainViewModel : BaseViewModel
     public ICommand SetFolderColorCommand { get; }
     public ICommand SetFolderIconCommand { get; }
     public ICommand ResetFolderCommand { get; }
+    public ICommand MarkFolderAsReadCommand { get; }
     public ICommand SaveFolderPreferencesCommand { get; }
     public ICommand SelectFolderCommand { get; }
     public ICommand SelectEmailCommand { get; }
@@ -271,6 +301,7 @@ public class MainViewModel : BaseViewModel
         SetFolderColorCommand = new RelayCommand<(MailFolderItem Folder, string Color)>(p => SetFolderColor(p.Folder, p.Color));
         SetFolderIconCommand = new RelayCommand<(MailFolderItem Folder, string Icon)>(p => SetFolderIcon(p.Folder, p.Icon));
         ResetFolderCommand = new RelayCommand<MailFolderItem>(ResetFolder);
+        MarkFolderAsReadCommand = new AsyncRelayCommand<MailFolderItem>(MarkFolderAsReadAsync);
         SaveFolderPreferencesCommand = new RelayCommand(SaveFolderPreferences);
 
         SelectFolderCommand = new RelayCommand<MailFolderItem>(f => { if (f != null) SelectedFolder = f; });
@@ -574,6 +605,92 @@ public class MainViewModel : BaseViewModel
         RefreshFolderTreeDisplay();
     }
 
+    public async Task MarkFolderAsReadAsync(MailFolderItem? folder)
+    {
+        folder ??= SelectedFolder;
+        if (folder == null) return;
+
+        IsApplyingRule = true;
+        ProgressTitle = $"Marking as Read: {folder.EffectiveDisplayName}";
+        ApplyingRuleName = folder.EffectiveDisplayName;
+        RuleProgressCurrent = 0;
+        RuleProgressTotal = 0;
+        RuleProgressPercent = 0;
+        RuleProgressSubject = string.Empty;
+
+        _ruleCts = new CancellationTokenSource();
+        var token = _ruleCts.Token;
+
+        try
+        {
+            var pageSize = _settingsService.Config.EmailPreferences.PageSize > 0
+                ? _settingsService.Config.EmailPreferences.PageSize
+                : 100;
+            var emails = (await _emailService.GetEmailsAsync(folder.Id, Math.Max(pageSize, 100))).ToList();
+            var unreadEmails = emails.Where(e => !e.IsRead).ToList();
+
+            RuleProgressTotal = unreadEmails.Count;
+            if (RuleProgressTotal == 0)
+            {
+                RuleProgressPercent = 100;
+            }
+
+            var markReadAction = new List<RuleAction> { new RuleAction { Type = ActionType.MarkAsRead } };
+
+            int current = 0;
+            foreach (var email in unreadEmails)
+            {
+                if (token.IsCancellationRequested) break;
+
+                current++;
+                RuleProgressCurrent = current;
+                RuleProgressSubject = email.Subject;
+                RuleProgressPercent = RuleProgressTotal > 0 ? (int)((double)current / RuleProgressTotal * 100) : 100;
+
+                await _emailService.ApplyRuleActionsAsync(email.Id, markReadAction);
+            }
+
+            folder.UnreadItemCount = 0;
+
+            if (SelectedFolder != null && SelectedFolder.Id.Equals(folder.Id, StringComparison.OrdinalIgnoreCase))
+            {
+                foreach (var email in _rawEmails)
+                {
+                    email.IsRead = true;
+                }
+                foreach (var email in Emails)
+                {
+                    email.IsRead = true;
+                }
+            }
+
+            var updatedFolders = await _emailService.GetMailFoldersAsync();
+            var updatedFolder = updatedFolders.FirstOrDefault(f => f.Id.Equals(folder.Id, StringComparison.OrdinalIgnoreCase));
+            if (updatedFolder != null)
+            {
+                folder.UnreadItemCount = updatedFolder.UnreadItemCount ?? 0;
+            }
+
+            StatusMessage = token.IsCancellationRequested
+                ? "Mark as read cancelled."
+                : $"All emails in '{folder.EffectiveDisplayName}' marked as read.";
+        }
+        catch (OperationCanceledException)
+        {
+            StatusMessage = "Mark as read cancelled.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Error marking folder as read: {ex.Message}";
+        }
+        finally
+        {
+            IsApplyingRule = false;
+            ProgressTitle = null;
+            ApplyingRuleName = null;
+        }
+    }
+
     private void SaveFolderPreferences()
     {
         // Capture any edited custom names from the view models
@@ -680,6 +797,7 @@ public class MainViewModel : BaseViewModel
 
         IsApplyingRule = true;
         ApplyingRuleName = ruleName;
+        ProgressTitle = $"Applying Rule: {ruleName}";
         RuleProgressCurrent = 0;
         RuleProgressTotal = Emails.Count;
         RuleProgressPercent = 0;
@@ -711,6 +829,7 @@ public class MainViewModel : BaseViewModel
         finally
         {
             IsApplyingRule = false;
+            ProgressTitle = null;
             ApplyingRuleName = null;
         }
     }
@@ -719,6 +838,7 @@ public class MainViewModel : BaseViewModel
     {
         _ruleCts?.Cancel();
         IsApplyingRule = false;
+        ProgressTitle = null;
         ApplyingRuleName = null;
     }
 }

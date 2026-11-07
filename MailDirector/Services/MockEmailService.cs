@@ -246,6 +246,19 @@ public class MockEmailService : IEmailService
                 Categories = categories
             };
 
+            if (!email.IsRead && isRead)
+            {
+                if (_emailFolderMap.TryGetValue(messageId, out var fId))
+                {
+                    var fIdx = _mockFolders.FindIndex(f => f.Id.Equals(fId, StringComparison.OrdinalIgnoreCase));
+                    if (fIdx >= 0)
+                    {
+                        var folder = _mockFolders[fIdx];
+                        _mockFolders[fIdx] = folder with { UnreadItemCount = Math.Max(0, (folder.UnreadItemCount ?? 0) - 1) };
+                    }
+                }
+            }
+
             return Task.CompletedTask;
         }
     }

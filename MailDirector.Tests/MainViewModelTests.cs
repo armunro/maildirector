@@ -201,6 +201,8 @@ public class MainViewModelTests : IDisposable
         Assert.Contains("<h1>Content</h1>", fullHtmlDarkResult);
         Assert.Contains("#1e1e1e !important", fullHtmlDarkResult);
         Assert.Contains("table, thead, tbody, tfoot, tr, td, th, div", fullHtmlDarkResult);
+        Assert.Contains("::-webkit-scrollbar", fullHtmlDarkResult);
+        Assert.Contains("scrollbar-face-color", fullHtmlDarkResult);
     }
 
     [Fact]
@@ -273,5 +275,39 @@ public class MainViewModelTests : IDisposable
         await Task.Delay(100);
 
         Assert.Contains("successfully processed", _mainViewModel.StatusMessage);
+    }
+
+    [Fact]
+    public async Task MarkFolderAsReadCommand_MarksAllEmailsInFolderAsRead()
+    {
+        await _mainViewModel.InitializeAsync();
+        var inbox = _mainViewModel.Folders.First(f => f.Id.Equals("inbox", StringComparison.OrdinalIgnoreCase));
+        Assert.NotNull(inbox);
+        Assert.True(inbox.UnreadItemCount > 0);
+
+        await _mainViewModel.LoadEmailsForFolderAsync(inbox.Id);
+        Assert.Contains(_mainViewModel.Emails, e => !e.IsRead);
+
+        var task = _mainViewModel.MarkFolderAsReadAsync(inbox);
+        await task;
+
+        Assert.Equal(0, inbox.UnreadItemCount);
+        Assert.All(_mainViewModel.Emails, e => Assert.True(e.IsRead));
+        Assert.Contains("marked as read", _mainViewModel.StatusMessage);
+        Assert.False(_mainViewModel.IsApplyingRule);
+    }
+
+    [Fact]
+    public void ProgressProperties_FormatProperly()
+    {
+        _mainViewModel.ApplyingRuleName = "TestRule";
+        Assert.Equal("Applying Rule: TestRule", _mainViewModel.ProgressTitle);
+
+        _mainViewModel.ProgressTitle = "Marking as Read: Inbox";
+        Assert.Equal("Marking as Read: Inbox", _mainViewModel.ProgressTitle);
+
+        _mainViewModel.RuleProgressCurrent = 2;
+        _mainViewModel.RuleProgressTotal = 5;
+        Assert.Equal("Processing 2 of 5", _mainViewModel.RuleProgressStatusText);
     }
 }

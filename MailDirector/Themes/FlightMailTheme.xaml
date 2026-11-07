@@ -205,8 +205,22 @@
     <Style x:Key="FolderListItemStyle" TargetType="ListBoxItem">
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         <Setter Property="Padding" Value="0"/>
-        <Setter Property="Margin" Value="2,1"/>
+        <Setter Property="Margin" Value="2,1,6,1"/>
         <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Tag" Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBox}}"/>
+        <Setter Property="ContextMenu">
+            <Setter.Value>
+                <ContextMenu>
+                    <MenuItem Header="Mark all as read"
+                              Command="{Binding PlacementTarget.Tag.MarkFolderAsReadCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                              CommandParameter="{Binding}">
+                        <MenuItem.Icon>
+                            <ui:SymbolIcon Symbol="MailRead24"/>
+                        </MenuItem.Icon>
+                    </MenuItem>
+                </ContextMenu>
+            </Setter.Value>
+        </Setter>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ListBoxItem">
@@ -284,9 +298,8 @@
             </Grid.ColumnDefinitions>
 
             <!-- Unread Indicator Dot -->
-            <Ellipse Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" Width="8" Height="8"
+            <Ellipse x:Name="UnreadDot" Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" Width="8" Height="8"
                      Fill="{DynamicResource SystemAccentColorPrimaryBrush}"
-                     Visibility="{Binding IsRead, Converter={StaticResource InverseBoolToVis}}"
                      Margin="0,0,8,0" VerticalAlignment="Center"/>
 
             <!-- Row 1: Sender Name, Subject & Date -->
@@ -298,32 +311,30 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- Sender Name -->
-                <TextBlock Grid.Column="0"
+                <TextBlock x:Name="SenderText"
+                           Grid.Column="0"
                            Text="{Binding From}"
-                           FontWeight="SemiBold"
                            FontSize="13"
-                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                            TextTrimming="CharacterEllipsis"
                            TextWrapping="NoWrap"
                            VerticalAlignment="Center"
                            Margin="0,0,8,0"/>
 
                 <!-- Subject -->
-                <TextBlock Grid.Column="1"
+                <TextBlock x:Name="SubjectText"
+                           Grid.Column="1"
                            Text="{Binding Subject}"
                            FontSize="12"
-                           FontWeight="Normal"
-                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                            TextTrimming="CharacterEllipsis"
                            TextWrapping="NoWrap"
                            VerticalAlignment="Center"
                            Margin="0,0,8,0"/>
 
                 <!-- Date -->
-                <TextBlock Grid.Column="2"
+                <TextBlock x:Name="DateText"
+                           Grid.Column="2"
                            Text="{Binding ReceivedDateTime, Converter={StaticResource FriendlyDate}}"
                            FontSize="11"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                            TextWrapping="NoWrap"
                            VerticalAlignment="Center"/>
             </Grid>
@@ -336,10 +347,10 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- Preview Snippet (Single line, no wrap) -->
-                <TextBlock Grid.Column="0"
+                <TextBlock x:Name="PreviewText"
+                           Grid.Column="0"
                            Text="{Binding BodyPreview, Converter={StaticResource SingleLine}}"
                            FontSize="11"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                            TextTrimming="CharacterEllipsis"
                            TextWrapping="NoWrap"
                            VerticalAlignment="Center"
@@ -365,6 +376,30 @@
                 </ItemsControl>
             </Grid>
         </Grid>
+        <DataTemplate.Triggers>
+            <!-- Read Email State -->
+            <DataTrigger Binding="{Binding IsRead}" Value="True">
+                <Setter TargetName="UnreadDot" Property="Visibility" Value="Collapsed"/>
+                <Setter TargetName="SenderText" Property="FontWeight" Value="Normal"/>
+                <Setter TargetName="SenderText" Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
+                <Setter TargetName="SubjectText" Property="FontWeight" Value="Normal"/>
+                <Setter TargetName="SubjectText" Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
+                <Setter TargetName="DateText" Property="FontWeight" Value="Normal"/>
+                <Setter TargetName="DateText" Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}"/>
+                <Setter TargetName="PreviewText" Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}"/>
+            </DataTrigger>
+            <!-- Unread Email State -->
+            <DataTrigger Binding="{Binding IsRead}" Value="False">
+                <Setter TargetName="UnreadDot" Property="Visibility" Value="Visible"/>
+                <Setter TargetName="SenderText" Property="FontWeight" Value="Bold"/>
+                <Setter TargetName="SenderText" Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
+                <Setter TargetName="SubjectText" Property="FontWeight" Value="SemiBold"/>
+                <Setter TargetName="SubjectText" Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}"/>
+                <Setter TargetName="DateText" Property="FontWeight" Value="SemiBold"/>
+                <Setter TargetName="DateText" Property="Foreground" Value="{DynamicResource SystemAccentColorPrimaryBrush}"/>
+                <Setter TargetName="PreviewText" Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
+            </DataTrigger>
+        </DataTemplate.Triggers>
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type models:EmailItem}">

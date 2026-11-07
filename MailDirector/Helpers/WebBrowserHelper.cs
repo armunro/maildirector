@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Net;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
@@ -11,6 +12,18 @@ namespace MailDirector.Helpers;
 
 public static class WebBrowserHelper
 {
+    [DllImport("gdi32.dll", EntryPoint = "CreateRoundRectRgn")]
+    private static extern IntPtr CreateRoundRectRgn(
+        int nLeftRect,
+        int nTopRect,
+        int nRightRect,
+        int nBottomRect,
+        int nWidthEllipse,
+        int nHeightEllipse);
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowRgn")]
+    private static extern int SetWindowRgn(IntPtr hWnd, IntPtr hRgn, bool bRedraw);
+
     public static readonly DependencyProperty HtmlProperty =
         DependencyProperty.RegisterAttached(
             "Html",
@@ -31,12 +44,57 @@ public static class WebBrowserHelper
     public static bool GetIsDarkMode(DependencyObject obj) => (bool)obj.GetValue(IsDarkModeProperty);
     public static void SetIsDarkMode(DependencyObject obj, bool value) => obj.SetValue(IsDarkModeProperty, value);
 
+    public static readonly DependencyProperty CornerRadiusProperty =
+        DependencyProperty.RegisterAttached(
+            "CornerRadius",
+            typeof(double),
+            typeof(WebBrowserHelper),
+            new FrameworkPropertyMetadata(0.0, OnCornerRadiusChanged));
+
+    public static double GetCornerRadius(DependencyObject obj) => (double)obj.GetValue(CornerRadiusProperty);
+    public static void SetCornerRadius(DependencyObject obj, double value) => obj.SetValue(CornerRadiusProperty, value);
+
     private static readonly DependencyProperty IsHookedProperty =
         DependencyProperty.RegisterAttached(
             "IsHooked",
             typeof(bool),
             typeof(WebBrowserHelper),
             new PropertyMetadata(false));
+
+    private static void OnCornerRadiusChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+        if (d is not WebBrowser browser) return;
+        EnsureEventsHooked(browser);
+        ApplyRoundedCorners(browser);
+    }
+
+    public static void ApplyRoundedCorners(WebBrowser browser)
+    {
+        var radius = GetCornerRadius(browser);
+        if (radius <= 0) return;
+
+        var width = (int)Math.Ceiling(browser.ActualWidth);
+        var height = (int)Math.Ceiling(browser.ActualHeight);
+        if (width <= 0 || height <= 0) return;
+
+        try
+        {
+            var hwnd = browser.Handle;
+            if (hwnd != IntPtr.Zero)
+            {
+                var ellipse = (int)Math.Round(radius * 2);
+                var hRgn = CreateRoundRectRgn(0, 0, width, height, ellipse, ellipse);
+                if (hRgn != IntPtr.Zero)
+                {
+                    SetWindowRgn(hwnd, hRgn, true);
+                }
+            }
+        }
+        catch
+        {
+            // Ignore Win32 exceptions
+        }
+    }
 
     private static void OnHtmlOrDarkModeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
@@ -52,7 +110,8 @@ public static class WebBrowserHelper
             try
             {
                 var bg = isDarkMode ? "#1e1e1e" : "#ffffff";
-                browser.NavigateToString($"<!DOCTYPE html><html><head><meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\" /></head><body style=\"background-color:{bg};\"></body></html>");
+                var scrollbarCss = GetScrollbarCss(isDarkMode);
+                browser.NavigateToString($"<!DOCTYPE html><html><head><meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\" />{scrollbarCss}</head><body style=\"background-color:{bg};\"></body></html>");
             }
             catch
             {
@@ -108,8 +167,17 @@ public static class WebBrowserHelper
             }
         };
 
-        browser.Navigated += (s, e) => SetSilent(browser, true);
-        browser.Loaded += (s, e) => SetSilent(browser, true);
+        browser.SizeChanged += (s, e) => ApplyRoundedCorners(browser);
+        browser.Navigated += (s, e) =>
+        {
+            SetSilent(browser, true);
+            ApplyRoundedCorners(browser);
+        };
+        browser.Loaded += (s, e) =>
+        {
+            SetSilent(browser, true);
+            ApplyRoundedCorners(browser);
+        };
     }
 
     private static void SetSilent(WebBrowser browser, bool silent)
@@ -163,8 +231,9 @@ public static class WebBrowserHelper
         if (content.Contains("<html", StringComparison.OrdinalIgnoreCase))
         {
             var metaTags = "<meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\" /><meta charset=\"utf-8\" />";
+            var scrollbarStyle = GetScrollbarCss(isDarkMode);
             var darkStyle = isDarkMode ? GetDarkModeCssOverride() : string.Empty;
-            var headInjection = metaTags + darkStyle;
+            var headInjection = metaTags + scrollbarStyle + darkStyle;
 
             if (content.Contains("<head>", StringComparison.OrdinalIgnoreCase))
             {
@@ -188,6 +257,51 @@ public static class WebBrowserHelper
 
         // HTML fragment
         return FormatHtmlTemplate(content, isDarkMode);
+    }
+
+    private static string GetScrollbarCss(bool isDarkMode)
+    {
+        var thumbColor = isDarkMode ? "#4b5563" : "#c1c5cc";
+        var thumbHoverColor = isDarkMode ? "#6b7280" : "#9ca3af";
+        var trackColor = isDarkMode ? "#1e1e1e" : "#f9fafb";
+        var arrowColor = isDarkMode ? "#9ca3af" : "#6b7280";
+
+        return $$"""
+            <style>
+                html, body {
+                    scrollbar-face-color: {{thumbColor}};
+                    scrollbar-track-color: {{trackColor}};
+                    scrollbar-arrow-color: {{arrowColor}};
+                    scrollbar-highlight-color: transparent;
+                    scrollbar-shadow-color: transparent;
+                    scrollbar-3dlight-color: transparent;
+                    scrollbar-darkshadow-color: transparent;
+                    scrollbar-color: {{thumbColor}} transparent;
+                    scrollbar-width: thin;
+                }
+                * {
+                    scrollbar-color: {{thumbColor}} transparent;
+                    scrollbar-width: thin;
+                }
+                ::-webkit-scrollbar {
+                    width: 8px;
+                    height: 8px;
+                }
+                ::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                ::-webkit-scrollbar-thumb {
+                    background-color: {{thumbColor}};
+                    border-radius: 4px;
+                }
+                ::-webkit-scrollbar-thumb:hover {
+                    background-color: {{thumbHoverColor}};
+                }
+                ::-webkit-scrollbar-corner {
+                    background: transparent;
+                }
+            </style>
+            """;
     }
 
     private static string GetDarkModeCssOverride()
@@ -232,6 +346,7 @@ public static class WebBrowserHelper
         var bgColor = isDarkMode ? "#1e1e1e" : "#ffffff";
         var linkColor = isDarkMode ? "#60a5fa" : "#2563eb";
         var hrColor = isDarkMode ? "#374151" : "#e5e7eb";
+        var scrollbarCss = GetScrollbarCss(isDarkMode);
         var darkCss = isDarkMode ? GetDarkModeCssOverride() : string.Empty;
 
         return $$"""
@@ -240,6 +355,7 @@ public static class WebBrowserHelper
             <head>
                 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
                 <meta charset="utf-8" />
+                {{scrollbarCss}}
                 <style>
                     body {
                         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
